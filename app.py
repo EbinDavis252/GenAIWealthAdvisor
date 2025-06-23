@@ -174,7 +174,7 @@ if st.button("🔍 Generate Portfolio"):
     }
 
     # ---------------- CAGR Table (Static) -----------------------
-    st.subheader("📉 CAGR Estimates (Static Reference)")
+    st.subheader("📉 CAGR Estimates ")
 
     cagr_data = {
         "Asset":        ["Equity", "Debt", "Gold"],
