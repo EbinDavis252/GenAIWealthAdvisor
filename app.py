@@ -1,11 +1,3 @@
-# ================================================================
-# GenAI-Based Wealth Advisor  •  Single-File Streamlit Application
-# ----------------------------------------------------------------
-# • Uses a static CAGR table (1-Y / 3-Y / 5-Y) you provided
-# • Generates an in-memory PDF report (no disk writes needed)
-# • Explains the portfolio via OpenRouter LLM
-# ================================================================
-
 import streamlit as st
 import plotly.express as px
 import pandas as pd
@@ -15,7 +7,7 @@ from io import BytesIO
 
 # ---------------------- 1.  API / Secrets -----------------------
 api_key   = st.secrets["openrouter_api_key"]
-model_name = st.secrets["openrouter_model"]      # e.g. "openai/gpt-3.5-turbo-0125"
+model_name = st.secrets["openrouter_model"]
 api_base   = "https://openrouter.ai/api/v1"
 headers    = {
     "Authorization": f"Bearer {api_key}",
@@ -24,7 +16,6 @@ headers    = {
 
 # ---------------------- 2.  UI Helpers --------------------------
 def login_section() -> None:
-    """Very light simulated login just to capture an e-mail."""
     st.sidebar.subheader("🔐 Simulated Login")
     email = st.sidebar.text_input("Enter your email")
     if st.sidebar.button("Login"):
@@ -32,7 +23,6 @@ def login_section() -> None:
         st.success(f"✅ Logged in as {email}")
 
 def get_portfolio_allocation(risk: str) -> dict:
-    """Fixed model: Low / Medium / High."""
     return {
         "Low":    {"Equity": 30, "Debt": 60, "Gold": 10},
         "Medium": {"Equity": 50, "Debt": 40, "Gold": 10},
@@ -40,7 +30,6 @@ def get_portfolio_allocation(risk: str) -> dict:
     }[risk]
 
 def explain_portfolio(allocation: dict, age: int, risk: str, goal: str) -> str:
-    """LLM call to OpenRouter for a friendly explanation."""
     prompt = (
         f"Act like a professional financial advisor. "
         f"Explain this portfolio allocation for a {age}-year-old with {risk} risk tolerance. "
@@ -68,17 +57,15 @@ def explain_portfolio(allocation: dict, age: int, risk: str, goal: str) -> str:
 def generate_pdf_bytes(name: str, age: int, income: int, risk: str,
                        goal: str, allocation: dict, explanation: str,
                        mip_info: dict | None = None) -> BytesIO:
-    """Return an in-memory BytesIO object with the finished PDF."""
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Wealth Advisor Report", ln=True, align="C")
     pdf.set_font("Arial", size=12)
 
-    # Basic profile
+    # Profile Info
     pdf.ln(6)
-    pdf.multi_cell(0, 8, f"Name: {name}    Age: {age}    "
-                         f"Monthly Income: ₹{income:,}")
+    pdf.multi_cell(0, 8, f"Name: {name}    Age: {age}    Monthly Income: ₹{income:,}")
     pdf.multi_cell(0, 8, f"Risk Tolerance: {risk}    Goal: {goal}")
 
     # Allocation
@@ -96,7 +83,7 @@ def generate_pdf_bytes(name: str, age: int, income: int, risk: str,
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 8, explanation)
 
-    # MIP block
+    # Monthly Investment Plan
     if mip_info:
         pdf.ln(4)
         pdf.set_font("Arial", "B", 12)
@@ -109,21 +96,20 @@ def generate_pdf_bytes(name: str, age: int, income: int, risk: str,
             f"{mip_info['rate']}% expected return."
         ))
 
-    buf = BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return buf
+    # ✅ Fixed: Output PDF as bytes
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    return BytesIO(pdf_bytes)
 
 # ---------------------- 4.  Streamlit App -----------------------
 st.set_page_config(page_title="GenAI Wealth Advisor", page_icon="💼")
 st.title("💼 GenAI-Based Wealth Advisor Chatbot")
 
-# -- Login --
+# Login
 login_section()
 if "user" not in st.session_state:
     st.stop()
 
-# -- Profile inputs --
+# Profile inputs
 st.subheader("👤 Profile Details")
 age           = st.slider("Age", 18, 70, 30)
 income        = st.number_input("Monthly Income (₹)", value=50_000, step=1_000)
@@ -131,12 +117,12 @@ risk_tolerance = st.selectbox("Risk Tolerance", ["Low", "Medium", "High"])
 goal          = st.text_input("Primary Goal (e.g., retirement, house)")
 
 # ----------------------------------------------------------------
-# BUTTON ▶  Generate Portfolio
+# ▶ Generate Portfolio Button
 # ----------------------------------------------------------------
 if st.button("🔍 Generate Portfolio"):
     allocation = get_portfolio_allocation(risk_tolerance)
 
-    # Donut / pie chart
+    # Donut Chart
     fig = px.pie(
         names=list(allocation.keys()),
         values=list(allocation.values()),
@@ -146,7 +132,7 @@ if st.button("🔍 Generate Portfolio"):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # LLM explanation
+    # LLM Explanation
     explanation = explain_portfolio(allocation, age, risk_tolerance, goal)
     st.markdown("### 📘 Advisor's Explanation")
     st.write(explanation)
@@ -173,9 +159,8 @@ if st.button("🔍 Generate Portfolio"):
         "future_value": target_corpus
     }
 
-    # ---------------- CAGR Table (Static) -----------------------
-    st.subheader("📉 CAGR Estimates ")
-
+    # ---------------- CAGR Table -----------------------
+    st.subheader("📉 CAGR Estimates")
     cagr_data = {
         "Asset":        ["Equity", "Debt", "Gold"],
         "1 Year (%)":   [22.5, 6.2, 12.1],
@@ -208,7 +193,7 @@ if st.button("🔍 Generate Portfolio"):
             mime="application/pdf"
         )
 
-    # ---------------- Feedback Section -------------------------
+    # ---------------- Feedback -------------------------
     st.subheader("⭐ Rate Your Experience")
     rating = st.selectbox(
         "How would you rate this output?",
